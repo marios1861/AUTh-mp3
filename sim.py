@@ -1,46 +1,64 @@
 import argparse
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 import numpy as np
 from mp3 import make_mp3_analysisfb, make_mp3_synthesisfb
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
-from scipy.signal import convolve
+from scipy.signal import upfirdn
 from math import floor
 from nothing import donothing, idonothing
 
 
-def codec0(wavin: Path, h: np.ndarray, M: int, N: int) -> Tuple[np.ndarray, np.ndarray]:
+def codec0(
+    wavin: Path, h: np.ndarray, M: int, N: int, calc_SNR=False
+) -> Tuple[np.ndarray, np.ndarray]:
+    _, data = wavfile.read(wavin)
     Ytot = coder0(wavin, h, M, N)
-    Ytot_list = [Ytot[i: (i + N), :] for i in range(0, floor(Ytot.shape[0] / N))]
-    xhat = decoder0(Ytot_list, h, M, N)
+    xhat = decoder0(Ytot, h, M, N)
+
+    # scale back xhat and fix time delay caused by filter size
+    xhat *= data.max() / xhat.max()
+    xhat = xhat[511:-512].astype(np.int16)
+
+    if calc_SNR:
+        err: np.ndarray = data[:xhat.size] - xhat
+        plt.plot(err, label="Reconstruction error")
+        mean = err.mean()
+        sd = err.std()
+        SNR = 10 * np.log10(abs(mean / sd))
+        print(f"{SNR=} dB")
+
     return (Ytot, xhat)
 
 
 def coder0(wavin: Path, h: np.ndarray, M: int, N: int) -> np.ndarray:
     sample_rate, data = wavfile.read(wavin)
     H = make_mp3_analysisfb(h, M)
-    Y = [convolve(data, h_i, mode="same") for h_i in H.T]
-    framed_data = [[y[i: (i + N)] for y in Y] for i in range(0, floor(Y[0].size / N))]
+    Y = [upfirdn(h_i, data, down=M) for h_i in H.T]
+    framed_data = [
+        [y[i * N : N * (i + 1)] for y in Y] for i in range(0, floor(Y[0].size / N))
+    ]
     Ytot = []
     for frame in framed_data:
-        frame = np.stack(frame, axis=1)
+        frame = np.vstack(frame).T
         Yc = donothing(frame)
         Ytot.append(Yc)
     Ytot = np.vstack(Ytot)
     return Ytot
 
 
-def decoder0(Ytot: List[np.ndarray], h: np.ndarray, M: int, N: int) -> np.ndarray:
+def decoder0(Ytot: np.ndarray, h: np.ndarray, M: int, N: int) -> np.ndarray:
     G = make_mp3_synthesisfb(h, M)
+    framed_data = [
+        Ytot[i * N : N * (i + 1), :] for i in range(0, floor(Ytot.shape[0] / N))
+    ]
     Yh_tot = []
-    for frame in Ytot:
+    for frame in framed_data:
         Yh = idonothing(frame)
         Yh_tot.append(Yh)
-    Yh_tot = np.vstack(Ytot)
-    R = [convolve(yH, g_i, mode="same") for (yH, g_i) in zip(Yh_tot.T, G.T)]
-    R = np.vstack(R).T
-    print(R.shape)
+    Yh_tot = np.vstack(Yh_tot)
+    R = np.vstack([upfirdn(g_i, y_i, up=M) for y_i, g_i in zip(Yh_tot.T, G.T)]).T
     xhat = np.sum(R, axis=1)
     return xhat
 
@@ -54,7 +72,6 @@ def main(args):
     if args.plot:
         # plot transfer functions of h_i (in dB)
         H = make_mp3_analysisfb(h, M)
-        G = make_mp3_synthesisfb(h, M)
         fig1 = plt.figure(num=0)
         fig2 = plt.figure(num=1)
         # calculate frequency axis
@@ -84,7 +101,10 @@ def main(args):
 
         plt.show()
 
-    Ytot, xhat = codec0(Path(args.file), h, M, N)
+    Ytot, xhat = codec0(Path(args.file), h, M, N, calc_SNR=args.snr)
+
+    plt.legend()
+    plt.show()
     wavfile.write(Path(f"modified_{args.file}"), sample_rate, xhat)
 
 
@@ -93,7 +113,13 @@ def parse_opt():
     parser.add_argument(
         "--file", type=str, default="myfile.wav", help="The wav file to be used"
     )
-    parser.add_argument("--plot", action="store_true", help="if provided, plots")
+    parser.add_argument(
+        "--plot",
+        action="store_true",
+        help="if provided, plot transfer functions of filters",
+    )
+    parser.add_argument("--snr", action="store_true", help="if provided, calculate SNR")
+
     return parser.parse_args()
 
 
