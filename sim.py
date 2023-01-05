@@ -22,12 +22,19 @@ def codec0(
     xhat = xhat[511:-512].astype(np.int16)
 
     if calc_SNR:
-        err: np.ndarray = data[:xhat.size] - xhat
-        plt.plot(err, label="Reconstruction error")
-        mean = err.mean()
-        sd = err.std()
-        SNR = 10 * np.log10(abs(mean / sd))
-        print(f"{SNR=} dB")
+
+        def signalPower(x):
+            return np.mean(x**2)
+
+        def SNR(signal, noise):
+            powS = signalPower(signal)
+            powN = signalPower(noise)
+            return 10 * np.log10(abs((powS - powN) / powN))
+
+        signal = data[: xhat.size]
+        # this is assumed to be the noise of the original signal data
+        noise: np.ndarray = signal - xhat
+        print(f"{SNR(signal.astype(np.float32), noise.astype(np.float32))=} dB")
 
     return (Ytot, xhat)
 
@@ -102,9 +109,6 @@ def main(args):
         plt.show()
 
     Ytot, xhat = codec0(Path(args.file), h, M, N, calc_SNR=args.snr)
-
-    plt.legend()
-    plt.show()
     wavfile.write(Path(f"modified_{args.file}"), sample_rate, xhat)
 
 
