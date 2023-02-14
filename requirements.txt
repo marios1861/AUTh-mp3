@@ -1,3 +1,4 @@
+e .
 numpy
 matplotlib
 PyQt6

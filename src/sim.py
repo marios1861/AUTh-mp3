@@ -2,12 +2,12 @@ import argparse
 from pathlib import Path
 from typing import Tuple
 import numpy as np
-from mp3 import make_mp3_analysisfb, make_mp3_synthesisfb
+from src.mp3 import make_mp3_analysisfb, make_mp3_synthesisfb
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
 from scipy.signal import upfirdn
 from math import floor
-from nothing import donothing, idonothing
+from src.nothing import donothing, idonothing
 
 
 def codec0(

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mp3"
+version = "0.0.1"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "PyQt6",
+]
+
+[project.scripts]
+"mp3_psycho" = "psycho:main"
+"mp3convert" = "sim:main"
