@@ -109,7 +109,7 @@ def STreduction(ST, c, Tq) -> Tuple[np.ndarray, np.ndarray]:
 def SpreadFunc(ST: np.ndarray, PM: np.ndarray, Kmax) -> np.ndarray:
     B = 689
     N = 36
-    SF = np.full((Kmax + 1, len(ST)), -np.Inf, np.float64)
+    SF = np.full((Kmax + 1, len(ST)), 0, np.float64)
     ST_len = len(ST)
     for i in range(0, Kmax + 1):
         for k in range(0, ST_len):
@@ -157,9 +157,9 @@ def psycho(c: np.ndarray, D: np.ndarray) -> np.ndarray:
 
 def main():
     np.random.seed(0)
-    a = np.random.rand(10, 10)
-    c = frameDCT(a)
-    D = Dksparse(10 * 10 - 1)
+    a = np.random.rand(36, 32)
+    c = frameDCT(a)  # 1152 (32 * 36)
+    D = Dksparse(36 * 32 - 1)
     # print(DCTpower(b).dtype)
     ST = STinit(c, D)
     # print(ST)
@@ -168,7 +168,7 @@ def main():
     Tq = Tq[0, :]
     (ST, PM) = STreduction(ST, c, Tq)
     # print(ST)
-    Ti = Masking_Thresholds(ST, PM, 10 * 10 - 1)
+    Ti = Masking_Thresholds(ST, PM, 32 * 36 - 1)
     print(Global_Masking_Thresholds(Ti, Tq))
     print(psycho(c, D))
     import matplotlib.pyplot as plt  # noqa
@@ -176,3 +176,7 @@ def main():
     plt.figure()
     plt.spy(D)
     plt.show()
+
+
+if __name__ == "__main__":
+    main()
