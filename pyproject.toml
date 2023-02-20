@@ -10,8 +10,10 @@ dependencies = [
     "scipy",
     "matplotlib",
     "PyQt6",
+    "tqdm"
 ]
 
 [project.scripts]
-"mp3_psycho" = "psycho:main"
+"mp3psycho" = "psycho:main"
 "mp3convert" = "sim:main"
+"mp3quantum" = "quantum:main"

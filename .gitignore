@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 modified*.wav
+initial*.wav
+total*.wav
+huff_frames.bin

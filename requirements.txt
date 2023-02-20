@@ -1,5 +1,6 @@
-e .
+-e .
 numpy
 matplotlib
 PyQt6
 scipy
+tqdm

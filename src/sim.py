@@ -1,13 +1,16 @@
 import argparse
+from math import floor
 from pathlib import Path
 from typing import Tuple
-import numpy as np
-from src.mp3 import make_mp3_analysisfb, make_mp3_synthesisfb
+
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.io import wavfile
 from scipy.signal import upfirdn
-from math import floor
-from src.nothing import donothing, idonothing
+
+from mp3 import make_mp3_analysisfb, make_mp3_synthesisfb
+from nothing import donothing, idonothing
+from total import MP3codec
 
 
 def codec0(
@@ -70,7 +73,8 @@ def decoder0(Ytot: np.ndarray, h: np.ndarray, M: int, N: int) -> np.ndarray:
     return xhat
 
 
-def main(args):
+def main():
+    args = parse_opt()
     M = 32
     N = 36
     sample_rate = 44100
@@ -109,7 +113,9 @@ def main(args):
         plt.show()
 
     Ytot, xhat = codec0(Path(args.file), h, M, N, calc_SNR=args.snr)
-    wavfile.write(Path(f"modified_{args.file}"), sample_rate, xhat)
+    wavfile.write(Path(f"initial_{args.file}"), sample_rate, xhat)
+    xhat_real = MP3codec(Path(args.file), h, M, N, calc_SNR=args.snr)
+    wavfile.write(Path(f"total_{args.file}"), sample_rate, xhat_real)
 
 
 def parse_opt():
@@ -128,4 +134,4 @@ def parse_opt():
 
 
 if __name__ == "__main__":
-    main(parse_opt())
+    main()
