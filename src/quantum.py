@@ -172,6 +172,141 @@ def all_bands_dequantizer(
     return xh
 
 
+def RLE(symb_index: np.ndarray, K: int) -> np.ndarray:
+    current_val = symb_index[0]
+    det_lengths = []
+    current_len = 0
+    for sym in symb_index:
+        # we are still detecting the same value
+        if sym == current_val:
+            current_len = current_len + 1
+        # we detected a new value
+        else:
+            det_lengths.append([current_val, current_len])
+            current_val = sym
+            # we count the length of sym
+            current_len = 1
+    return np.array(det_lengths, dtype=int)
+
+
+def RLD(run_symbols: np.ndarray, K: int) -> np.ndarray:
+    symb_index = np.zeros((K), dtype=int)
+    pos = 0
+    for val, length in run_symbols:
+        symb_index[pos : pos + length] = val
+        pos = pos + length
+    return symb_index
+
+
+class Node:
+    def __init__(self, prob, symbol, left=None, right=None):
+        self.prob = prob
+        self.symbol = symbol
+        self.left = left
+        self.right = right
+
+        # 0: left, 1: right
+        self.code = ""
+
+
+def huff(run_symbols: np.ndarray) -> Tuple[str, np.ndarray]:
+    symbols_probs = {}
+    nodes = []
+    for val, length in run_symbols:
+        symbols_probs[str(val)] = symbols_probs.get(str(val), 0) + 1
+        symbols_probs[str(length)] = symbols_probs.get(str(length), 0) + 1
+
+    for symbol, prob in symbols_probs.items():
+        nodes.append(Node(prob, symbol))
+
+    while len(nodes) != 1:
+        nodes = sorted(nodes, key=lambda x: x.prob)
+
+        right = nodes[0]
+        left = nodes[1]
+
+        left.code = "0"
+        right.code = "1"
+
+        newNode = Node(left.prob + right.prob, left.symbol + right.symbol, left, right)
+        nodes.remove(left)
+        nodes.remove(right)
+        nodes.append(newNode)
+
+    codes = {}
+
+    def calc_codes(node, val=""):
+        new_val = val + node.code
+
+        if node.left:
+            calc_codes(node.left, new_val)
+        if node.right:
+            calc_codes(node.right, new_val)
+        if not node.right and not node.left:
+            codes[node.symbol] = new_val
+        return codes
+
+    def huff_encode(data, coding):
+        encoded_output = []
+        for symb_idx, length in data:
+            encoded_output.append(coding[str(symb_idx)])
+            encoded_output.append(coding[str(length)])
+        string_vec = "".join(encoded_output)
+        return string_vec
+
+    node = nodes[0]
+    huffman_encoding = calc_codes(node)
+    symbol_vec = huff_encode(run_symbols, huffman_encoding)
+    return (symbol_vec, np.array(list(symbols_probs.items()), dtype=int))
+
+
+def ihuff(frame_stream: str, frame_symbol_prob: np.ndarray) -> np.ndarray:
+    nodes = []
+
+    for symbol, prob in frame_symbol_prob:
+        nodes.append(Node(prob, symbol))
+
+    while len(nodes) != 1:
+        nodes = sorted(nodes, key=lambda x: x.prob)
+
+        right = nodes[0]
+        left = nodes[1]
+
+        left.code = "0"
+        right.code = "1"
+
+        newNode = Node(left.prob + right.prob, left.symbol + right.symbol, left, right)
+        nodes.remove(left)
+        nodes.remove(right)
+        nodes.append(newNode)
+
+    node = nodes[0]
+
+    current_node = node
+    is_symb = True
+    symbols = []
+    current_pair = []
+
+    # 0 flushes the last two entries
+    for char in (frame_stream + '0'):
+        if not (current_node.left or current_node.right):
+            current_pair.append(current_node.symbol)
+            current_node = node
+            if is_symb:
+                is_symb = False
+            else:
+                symbols.append(current_pair)
+                current_pair = []
+                is_symb = True
+
+        if char == "0":
+            current_node = current_node.left
+        else:
+            current_node = current_node.right
+
+    return np.array(symbols)
+
+
 def main():
     np.random.seed(0)
     a_raw = 100 * np.random.rand(36, 32) - 50
@@ -190,6 +325,15 @@ def main():
     plt.figure()
     plt.plot(range(len(ahat)), ahat, a)
     plt.show()
+    print(len(syms))
+    rle = RLE(syms, len(syms))
+    print(rle, len(rle))
+    huff_vec, huff_freq = huff(rle)
+    rle_hat = ihuff(huff_vec, huff_freq)
+    assert np.all(rle_hat == rle)
+    rld = RLD(rle, len(syms))
+    # test rle - rld functions
+    assert np.all(rld == syms)
 
 
 if __name__ == "__main__":
