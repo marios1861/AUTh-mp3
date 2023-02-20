@@ -5,7 +5,7 @@ from scipy.sparse import lil_matrix, csr_matrix
 
 
 def frameDCT(Y: np.ndarray) -> np.ndarray:
-    return dct(Y.reshape((-1, 1)), axis=0)
+    return dct(Y.reshape((-1, 1)), axis=0)[:, 0]
 
 
 def iframeDCT(c: np.ndarray, N: int, M: int) -> np.ndarray:
@@ -158,7 +158,7 @@ def psycho(c: np.ndarray, D: np.ndarray) -> np.ndarray:
 def main():
     np.random.seed(0)
     a = np.random.rand(36, 32)
-    c = frameDCT(a)  # 1152 (32 * 36)
+    c = frameDCT(a)[:, 0]  # 1152 (32 * 36)
     D = Dksparse(36 * 32 - 1)
     # print(DCTpower(b).dtype)
     ST = STinit(c, D)

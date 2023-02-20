@@ -186,6 +186,9 @@ def RLE(symb_index: np.ndarray, K: int) -> np.ndarray:
             current_val = sym
             # we count the length of sym
             current_len = 1
+    if len(det_lengths) == 0:
+        det_lengths.append([current_val, current_len])
+
     return np.array(det_lengths, dtype=int)
 
 
@@ -310,7 +313,7 @@ def ihuff(frame_stream: str, frame_symbol_prob: np.ndarray) -> np.ndarray:
 def main():
     np.random.seed(0)
     a_raw = 100 * np.random.rand(36, 32) - 50
-    a = frameDCT(a_raw)[:, 0]
+    a = frameDCT(a_raw)
     DCT_band_scale(a)
     # arr = np.vstack((-np.random.rand(5, 1), np.random.rand(5, 1)))
     # print(arr)

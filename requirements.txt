@@ -3,3 +3,4 @@ numpy
 matplotlib
 PyQt6
 scipy
+tqdm
