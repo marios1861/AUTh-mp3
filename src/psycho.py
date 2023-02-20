@@ -158,7 +158,7 @@ def psycho(c: np.ndarray, D: np.ndarray) -> np.ndarray:
 def main():
     np.random.seed(0)
     a = np.random.rand(36, 32)
-    c = frameDCT(a)[:, 0]  # 1152 (32 * 36)
+    c = frameDCT(a)  # 1152 (32 * 36)
     D = Dksparse(36 * 32 - 1)
     # print(DCTpower(b).dtype)
     ST = STinit(c, D)
@@ -169,10 +169,13 @@ def main():
     (ST, PM) = STreduction(ST, c, Tq)
     # print(ST)
     Ti = Masking_Thresholds(ST, PM, 32 * 36 - 1)
-    print(Global_Masking_Thresholds(Ti, Tq))
+    Tg = Global_Masking_Thresholds(Ti, Tq)
     print(psycho(c, D))
     import matplotlib.pyplot as plt  # noqa
-
+    # Tq[800:] = Tq[800:]*0.5
+    plt.plot(np.arange(len(Tq)), Tq)
+    plt.plot(np.arange(len(Tg)), Tg)
+    plt.show()
     plt.figure()
     plt.spy(D)
     plt.show()
